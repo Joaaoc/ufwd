@@ -1,0 +1,43 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Compile Binaries
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: 🔨 Build and Compress (Linux AMD64)
+        run: |
+          GOOS=linux GOARCH=amd64 go build -ldflags="-X main.Version=${GITHUB_REF_NAME}" -o ufwd ./src
+          tar -czvf ufwd_linux_amd64.tar.gz ufwd
+
+      - name: 🔨 Build and Compress (Linux ARM64)
+        run: |
+          GOOS=linux GOARCH=arm64 go build -ldflags="-X main.Version=${GITHUB_REF_NAME}" -o ufwd ./src
+          tar -czvf ufwd_linux_arm64.tar.gz ufwd
+
+      - name: 📦 Create Release and Upload
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ufwd_linux_amd64.tar.gz
+            ufwd_linux_arm64.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
